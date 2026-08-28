@@ -1,8 +1,25 @@
 // app/details/[date]/page.tsx
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApodSingle } from "@/lib/nasaApi";
+import DetailsImage from "@/components/details-image";
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+export function generateStaticParams() {
+  const params: { date: string }[] = [];
+  const today = new Date();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    params.push({
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    });
+  }
+  return params;
+}
 
 export default async function DetailsPage({
   params,
@@ -53,16 +70,7 @@ export default async function DetailsPage({
         <div className="mt-8">
           {apod.media_type === "image" && imageSrc ? (
             <figure className="relative w-full overflow-hidden rounded-2xl border border-white/10">
-              <div className="relative aspect-video w-full">
-                <Image
-                  src={imageSrc}
-                  alt={apod.title}
-                  fill
-                  sizes="(max-width: 896px) 100vw, 896px"
-                  priority
-                  className="object-contain dark:bg-black"
-                />
-              </div>
+              <DetailsImage src={imageSrc} alt={apod.title} />
               {apod.hdurl && (
                 <figcaption className="absolute bottom-3 right-3">
                   <a

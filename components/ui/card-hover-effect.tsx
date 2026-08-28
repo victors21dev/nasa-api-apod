@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import React, { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type HoverCardItem = {
   index?: number;
@@ -13,6 +14,7 @@ export type HoverCardItem = {
   image?: string;
   date?: string;
   author?: string;
+  mediaType?: "image" | "video";
 };
 
 function formatDate(date: string): string {
@@ -35,9 +37,7 @@ function CardImage({ src, alt }: { src: string; alt: string }) {
 
   return (
     <div className="relative h-44 w-full overflow-hidden rounded-xl bg-neutral-800">
-      {!loaded && (
-        <div className="absolute inset-0 animate-pulse bg-neutral-800/80" aria-hidden="true" />
-      )}
+      {!loaded && <Skeleton className="absolute inset-0 rounded-none" />}
       <Image
         src={src}
         alt={alt}
@@ -107,6 +107,18 @@ export const HoverEffect = ({
               {typeof item.index === "number" && (
                 <span className="absolute top-3 left-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-sm font-semibold text-white backdrop-blur">
                   {item.index}
+                </span>
+              )}
+              {item.mediaType && (
+                <span
+                  className={cn(
+                    "absolute top-3 right-3 z-10 rounded-full px-2.5 py-1 text-xs font-medium text-white backdrop-blur",
+                    item.mediaType === "video"
+                      ? "bg-red-600/80"
+                      : "bg-black/70"
+                  )}
+                >
+                  {item.mediaType === "video" ? "Vídeo" : "Foto"}
                 </span>
               )}
             </div>

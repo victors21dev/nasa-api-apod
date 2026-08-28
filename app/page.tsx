@@ -1,7 +1,9 @@
 // app/page.tsx
+import { Suspense } from "react";
 import { getApodRange } from "@/lib/nasaApi";
 import { HoverEffect, HoverCardItem } from "@/components/ui/card-hover-effect";
 import MonthPicker from "@/components/month-picker";
+import { ApodGallerySkeleton } from "@/components/apod-gallery-skeleton";
 
 const MIN_YEAR = 2020;
 
@@ -16,16 +18,11 @@ function cardImage(apod: { media_type: string; url: string; thumbnail_url?: stri
   return apod.thumbnail_url || undefined;
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ year?: string; month?: string }>;
-}) {
+async function resolveMonth(params: { year?: string; month?: string }) {
   const now = new Date();
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth() + 1;
 
-  const params = await searchParams;
   let year = Number(params.year);
   let month = Number(params.month);
 
@@ -46,6 +43,38 @@ export default async function Home({
     month = nowMonth;
   }
 
+  return { year, month };
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
+  const { year, month } = await resolveMonth(await searchParams);
+  const monthLabel = `${pad(month)}/${year}`;
+
+  return (
+    <main className="max-w-6xl mx-auto px-6 py-12">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold tracking-tight">Imagem Astronômica do Dia</h1>
+        <p className="mt-2 text-zinc-400">
+          Galeria de APOD da NASA referente a <span className="text-zinc-200">{monthLabel}</span>.
+          Clique em um card para ver os detalhes.
+        </p>
+        <div className="mt-5">
+          <MonthPicker year={year} month={month} />
+        </div>
+      </header>
+      <Suspense fallback={<ApodGallerySkeleton />}>
+        <ApodGallery year={year} month={month} />
+      </Suspense>
+    </main>
+  );
+}
+
+async function ApodGallery({ year, month }: { year: number; month: number }) {
+  const now = new Date();
   let end = new Date(year, month, 0);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (end > today) {
@@ -67,23 +96,8 @@ export default async function Home({
       image: cardImage(apod),
       date: apod.date,
       author: apod.copyright,
+      mediaType: apod.media_type,
     }));
 
-  const monthLabel = `${pad(month)}/${year}`;
-
-  return (
-    <main className="max-w-6xl mx-auto px-6 py-12">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight">Imagem Astronômica do Dia</h1>
-        <p className="mt-2 text-zinc-400">
-          Galeria de APOD da NASA referente a <span className="text-zinc-200">{monthLabel}</span>.
-          Clique em um card para ver os detalhes.
-        </p>
-        <div className="mt-5">
-          <MonthPicker year={year} month={month} />
-        </div>
-      </header>
-      <HoverEffect items={items} />
-    </main>
-  );
+  return <HoverEffect items={items} />;
 }
