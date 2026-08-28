@@ -1,69 +1,89 @@
-import Image from "next/image";
+// app/page.tsx
+import { getApodRange } from "@/lib/nasaApi";
+import { HoverEffect, HoverCardItem } from "@/components/ui/card-hover-effect";
+import MonthPicker from "@/components/month-picker";
 
-export default function Home() {
+const MIN_YEAR = 2020;
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function cardImage(apod: { media_type: string; url: string; thumbnail_url?: string }): string | undefined {
+  if (apod.media_type === "image") {
+    return apod.url || undefined;
+  }
+  return apod.thumbnail_url || undefined;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
+
+  const params = await searchParams;
+  let year = Number(params.year);
+  let month = Number(params.month);
+
+  if (
+    Number.isNaN(year) ||
+    Number.isNaN(month) ||
+    year < MIN_YEAR ||
+    year > nowYear
+  ) {
+    year = nowYear;
+    month = nowMonth;
+  }
+
+  if (year === nowYear) {
+    month = Math.min(month, nowMonth);
+  }
+  if (month < 1 || month > 12) {
+    month = nowMonth;
+  }
+
+  let end = new Date(year, month, 0);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (end > today) {
+    end = today;
+  }
+
+  const startDate = `${year}-${pad(month)}-01`;
+  const endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+
+  const apods = await getApodRange(startDate, endDate, true);
+
+  const items: HoverCardItem[] = apods
+    .reverse()
+    .map((apod, i) => ({
+      index: i + 1,
+      title: apod.title,
+      description: apod.explanation,
+      link: `/details/${apod.date}`,
+      image: cardImage(apod),
+      date: apod.date,
+      author: apod.copyright,
+    }));
+
+  const monthLabel = `${pad(month)}/${year}`;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="max-w-6xl mx-auto px-6 py-12">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold tracking-tight">Imagem Astronômica do Dia</h1>
+        <p className="mt-2 text-zinc-400">
+          Galeria de APOD da NASA referente a <span className="text-zinc-200">{monthLabel}</span>.
+          Clique em um card para ver os detalhes.
+        </p>
+        <div className="mt-5">
+          <MonthPicker year={year} month={month} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </header>
+      <HoverEffect items={items} />
+    </main>
   );
 }
